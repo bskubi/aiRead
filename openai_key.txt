@@ -1,0 +1,1 @@
+Replace this text with your OpenAI key, found here: https://platform.openai.com/account/api-keys
