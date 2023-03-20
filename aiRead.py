@@ -1,7 +1,9 @@
-import random, time, os, nltk, re, openai
+import random, time, os, nltk, re, openai, multiprocessing, timeit
 
 openai_key = open("openai_key.txt").read()
 openai.api_key = openai_key
+
+chat_response = "a"
 
 class airController:
     def __init__(self):
@@ -13,6 +15,7 @@ class airController:
 
     def setDefaults(self):
         self.set = {
+            "tokenize":True,
             "forward":True,
             "token_count":1,
             "typewriter":False,
@@ -49,7 +52,7 @@ class airController:
         self.loc = min(len(self.tokens)-1, self.loc)
 
     def display(self, force_text = None, apply_tabs = True):
-        if self.loc is None and self.force_text is None:
+        if self.loc is None and force_text is None:
             return
 
         to_display = ""
@@ -202,7 +205,7 @@ class airInterpreter:
         add_prompt = "Rewrite the following as a " + choice + ", making the same point, and keeping it as information-dense as possible.\n\n"""
         content = add_prompt + self.controller.currentDisplay()
         response = self._getChatbotResponse(content, self.controller.set["cheap_model"])
-        print(response)
+        self.controller.display(response)
 
     def _cls(self, i):
         os.system("cls")
@@ -221,14 +224,14 @@ class airInterpreter:
         add_prompt = """Rewrite the following as a sassy but semi-serious Twitter hot take, but keep the same content and make the same point.\n\n"""
         content = add_prompt + self.controller.currentDisplay()
         response = self._getChatbotResponse(content, self.controller.set["cheap_model"])
-        print(response)
+        self.controller.display(response)
 
     def _tweetstorm(self, i):
         ac._typewriter("Preparing a tweetstorm...")
-        add_prompt = """Rewrite the following as a sassy Twitter tweetstorm, with individually numbered tweets, humor throughout, and /thread at the end."""
+        add_prompt = """Rewrite the following as a sassy Twitter tweetstorm as written by a scientific expert communicating with the public, with individually numbered tweets, humor throughout, and /thread at the end."""
         content = add_prompt + self.controller.currentDisplay()
         response = self._getChatbotResponse(content, self.controller.set["cheap_model"])
-        print(response)
+        self.controller.display(response)
 
     def _explain(self, i):
         ac._typewriter("Preparing explanation...")
@@ -236,17 +239,34 @@ class airInterpreter:
             Finally, describe what the sentence means in conversational, intuitive language.\n\n"""
         content = add_prompt + self.controller.currentDisplay()
         response = self._getChatbotResponse(content, self.controller.set["cheap_model"])
-        print(response)
+        self.controller.display(response)
 
     def _quiz(self, i):
         user_reply = ""
         start = self.controller.loc
         mod = self.controller.set["cheap_model"]
-        while user_reply != "done":
+        untested = []
+        if len(i) > 0 and i.strip != "":
+            if i.strip()[0] == ".":
+                untested = [start]
+            else:
+                args = i.split()
+                if len(args) == 1:
+                    first = int(''.join(x for x in args[0] if x.isdigit()))
+                    untested = list(range(first, start+1))
+                else:
+                    first = int(''.join(x for x in args[0] if x.isdigit()))
+                    last = int(''.join(x for x in args[1] if x.isdigit())) + 1
+                    untested = list(range(first, last))
+        else:
+            untested = list(range(self.controller.loc))
+        
+        while user_reply != "done" and len(untested) > 0:
             os.system("cls") 
             ac._typewriter("\nPreparing a quiz prompt...\n")
             add_prompt = """Generate a single-sentence short-answer quiz prompt on the following material:\n"""
-            self.controller.loc = random.randint(0, start)
+            self.controller.loc = random.choice(untested)
+            del untested[untested.index(self.controller.loc)]
             content = add_prompt + self.controller.currentDisplay()
             response = self._getChatbotResponse(content, mod)
             self.controller.display(response)
@@ -259,13 +279,14 @@ class airInterpreter:
                 self.controller.display()
                 input()
                 continue
-            content = """You are pretending to be a teacher grading a student answer.
-                        Show some personality. Keep your response to 1-2 short sentences.
-                        Praise the answer's strengths. Mention any pieces of information they should have included.\n""" \
+            content =   "SOURCE MATERIAL: \n" \
+                        + self.controller.currentDisplay() \
+                        + "QUIZ QUESTION: \n" \
                         + response \
-                        + "STUDENT ANSWER: " \
+                        + "STUDENT ANSWER: \n" \
                         + user_reply \
-                        + "END OF STUDENT ANSWER\n"
+                        + "\nEND OF STUDENT ANSWER" \
+                        + "\nGRADER FEEDBACK: \n" \
 
             response = self._getChatbotResponse(content, mod)
 
@@ -290,9 +311,31 @@ class airInterpreter:
             Text:"""
         content = add_prompt + self.controller.currentDisplay()
         response = self._getChatbotResponse(content, self.controller.set["cheap_model"])
-        print(response)
+        self.controller.display(response)
 
     def _getChatbotResponse(self, content, bot_model):
+        max_tries = 10
+        for i in range(max_tries):
+            queue = multiprocessing.Queue()
+            p = multiprocessing.Process(target = self._requestChatbotResponse, args=(content, bot_model, queue,))
+            p.start()
+
+            if self._limitedWait(10, queue):
+                return queue.get()
+            else:
+                print("Trying again...")
+                p.terminate()
+
+
+    def _limitedWait(self, s, queue):
+        start = timeit.default_timer()
+        while timeit.default_timer() - start < s and queue.empty():
+            continue
+        return not queue.empty()
+        
+
+    def _requestChatbotResponse(self, content, bot_model, queue):
+        global chat_response
         response =  openai.ChatCompletion.create(
             model=bot_model,
             messages=[{"role": "user", "content": content}],
@@ -300,7 +343,7 @@ class airInterpreter:
             n=1,
             temperature=0.5,
         )
-        return response["choices"][0]["message"]["content"]
+        queue.put(response["choices"][0]["message"]["content"])
 
     def _reverseTypewriter(self, i):
         self.controller.set["typewriter"] = not self.controller.set["typewriter"]
@@ -337,12 +380,14 @@ class airInterpreter:
                     fun(args)
 
 
-ac = airController()
-ac.tokenize(open("aiRead.txt", encoding="utf8").read())
-ac.set["typewriter"] = False
+if __name__ == '__main__':
+    ac = airController()
+    if ac.set["tokenize"]:
+        ac.tokenize(open("aiRead.txt", encoding="utf8").read())
+    ac.set["typewriter"] = False
 
-ic = airInterpreter()
-ic.controller = ac
-ic.controller.display()
-while True:
-    ic.prompt()
+    ic = airInterpreter()
+    ic.controller = ac
+    ic.controller.display()
+    while True:
+        ic.prompt()
