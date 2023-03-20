@@ -320,7 +320,7 @@ class airInterpreter:
             p = multiprocessing.Process(target = self._requestChatbotResponse, args=(content, bot_model, queue,))
             p.start()
 
-            if self._limitedWait(10, queue):
+            if self._limitedWait(15, queue):
                 return queue.get()
             else:
                 print("Trying again...")
@@ -335,7 +335,6 @@ class airInterpreter:
         
 
     def _requestChatbotResponse(self, content, bot_model, queue):
-        global chat_response
         response =  openai.ChatCompletion.create(
             model=bot_model,
             messages=[{"role": "user", "content": content}],
