@@ -1,6 +1,6 @@
 import random, time, os, nltk, re, openai, multiprocessing, timeit
 
-openai_key = open("openai_key.txt").read()
+openai_key = open("openai_key.txt").read().strip()
 openai.api_key = openai_key
 
 chat_response = "a"
@@ -241,9 +241,11 @@ class airInterpreter:
         print()
 
         while True:
-            content += input("blank to break> ") + "\n\n"
-
-            if content == "":
+            i = input("blank to break> ") + "\n\n"
+            
+            content += i
+            
+            if i.strip() == "":
                 break
 
             response = self._getChatbotResponse(content, self.controller.set["cheap_model"])
@@ -311,13 +313,17 @@ class airInterpreter:
         while user_reply != "done" and len(untested) > 0:
             os.system("cls") 
             ac._typewriter("\nPreparing a quiz prompt...\n")
-            add_prompt = """Generate a single-sentence short-answer quiz prompt on the following material:\n"""
+            add_prompt = """Break this down into multiple quiz questions with answers:\n"""
             self.controller.loc = random.choice(untested)
             del untested[untested.index(self.controller.loc)]
             content = add_prompt + self.controller.currentDisplay()
+            qa = self._getChatbotResponse(content, mod)
+
+            content = """Select one of these question-answer pairs and display the question only:\n""" + qa
             response = self._getChatbotResponse(content, mod)
             self.controller.display(response)
-            user_reply = input("\n'done' = end quiz, 'skip' = new question, 'view' = check source, anything else = answer> ")
+            
+            user_reply = input("\n'done' = end quiz, 'skip' = new question, 'view' = check source, 'answer' = check answer, anything else = answer> ")
             if user_reply == "done":
                 break
             if user_reply == "skip":
@@ -326,6 +332,12 @@ class airInterpreter:
                 self.controller.display()
                 input()
                 continue
+            if user_reply == 'answer':
+            	content = "Extract the answer for the question '" + response + "' from the test bank:\n" + qa
+            	response = self._getChatbotResponse(content, mod)
+            	self.controller.display(response)
+            	input()
+            	continue
             content =   "SOURCE MATERIAL: \n" \
                         + self.controller.currentDisplay() \
                         + "QUIZ QUESTION: \n" \
