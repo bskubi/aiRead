@@ -175,6 +175,7 @@ class airInterpreter:
             ("tweetstorm", 0):(self._tweetstorm, None),
             ("poem", 0):(self._poem, None),
             ("quiz", 0):(self._quiz, None),
+            ("tutor", 0):(self._tutor, None),
             ("help", 0):(self._help, None)
         }
 
@@ -190,6 +191,7 @@ class airInterpreter:
         print("cls will clear the screen, and typing pcls will toggle whether or not to clear the screen automatically between sentences")
         print("Type 'explain' to get a simplified explanation, with all the jargon terms defined")
         print("Type 'quiz' to generate an interactive quiz with 'teacher' feedback")
+        print("Type 'tutor' to talk with a tutor. Follow 'tutor' with your topic of interest, or leave blank to talk about the current display text")
         print("Type 'twit' to get a twitter hot take version of the material you're on")
         print("Type 'tweetstorm' to get a whole twitter tweetstorm about it - highly recommended!")
         print("Type 'poem' to rewrite the text in the form of a poem")
@@ -206,6 +208,51 @@ class airInterpreter:
         content = add_prompt + self.controller.currentDisplay()
         response = self._getChatbotResponse(content, self.controller.set["cheap_model"])
         self.controller.display(response)
+
+    def _tutor(self, i):
+        add_prompt = ["""I want to learn about """, """. In a moment, I'm going to ask you a series of questions about it. But before we get into it, I'd appreciate it if you answered as though you were a no nonsense teacher with an ambitious, self-directed student. That is:
+
+        * Err in the direction of thinking that I'm relatively knowledgable and technical.
+
+        * Don't overexplain things. I'll ask for more information if I need it.
+
+        * Assume that I'm already skeptical and that you don't need to qualify, hedge, or otherwise add to or manage my skepticism.
+
+        * Don't apologize for misunderstanding or getting an answer wrong.
+
+        * It's fine to be a bit abrupt and even "mean". Value directness and frankness; assume I'm relatively insensitive.
+
+        * Where reasonable suggest things for me to try independently. It's fine to tell me to install packages or run go out and do things or whatever, if you think it will help me learn quickly. (Only do this were reasonable; otherwise abstract explanations are fine.)
+
+        * Give at most one example per response.
+
+        * If you want to direct me to resources, I prefer text over videos and other non-text-centric media."""]
+
+        topic = ' '.join(i.split()[0:]) if i.strip() != "" else self.controller.currentDisplay()
+
+        content = add_prompt[0] + topic + add_prompt[1]
+
+        response = self._getChatbotResponse(content, self.controller.set["cheap_model"])
+
+        print()
+
+        self.controller.display(response)
+
+        print()
+
+        while True:
+            content += input("blank to break> ") + "\n\n"
+
+            if content == "":
+                break
+
+            response = self._getChatbotResponse(content, self.controller.set["cheap_model"])
+            
+            self.controller.display(response)
+
+            print()
+
+            content = self._getChatbotResponse("Summarize the following conversation: " + content, self.controller.set["cheap_model"])
 
     def _cls(self, i):
         os.system("cls")
