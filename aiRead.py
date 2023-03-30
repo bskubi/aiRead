@@ -277,27 +277,22 @@ class airInterpreter:
             content = self._getChatbotResponse("Summarize the following conversation: " + content, self.controller.set["cheap_model"])
 
     def _bullets(self, i):
-        add_prompt = """
-            Rewrite in compressed, simplified/shorthand English in a nested/multilayered bullet point list.\n\n
-
-            Use a format as follows:
-            * Main point 1
-                * Subpoint 1
-                    * Sub-subpoint1
-                * Subpoint 2
-            * Main point 2
-                * Subpoint 1
-                * Subpoint 2
-                * Subpoint 3
-
-            What follows is the text to put in this format:"""
+        ac._typewriter("Compressing...")
+        add_prompt = """Eliminate citations from the following text:\n\n"""        
         content = add_prompt + self.controller.currentDisplay()
         response = self._getChatbotResponse(content, self.controller.set["cheap_model"])
-        
 
-        content = "Rewrite the following in simplified English, but keep it in the same nested bullet-point list format:\n\n" + response
+        ac._typewriter("Adding bullet points...")
+
+        add_prompt = """Reformat the following text in a tabbed nested/multilayered bullet-point structure:\n\n"""        
+        content = add_prompt + response
         response = self._getChatbotResponse(content, self.controller.set["cheap_model"])
 
+        ac._typewriter("Polishing format...")
+        add_prompt = """Space out the bullet points more:\n\n"""
+        content = add_prompt + response
+        response = self._getChatbotResponse(content, self.controller.set["cheap_model"])
+        
         print(response)
 
     def _cls(self, i):
