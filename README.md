@@ -7,6 +7,7 @@ You'll need to have the nltk and openai packages installed.
 You can install them with the following terminal commands:
 
 pip install nltk
+
 pip install openai
 
 Type 'help' to learn how to interact with the program. Enjoy!
