@@ -30,6 +30,7 @@ class airController:
             "columns":80,
             "pcls":False,
             "display_loc":True,
+            "pric":False,
             "openai_api_key":openai_key,
             "cheap_model":"gpt-3.5-turbo-0301",
             "fancy_model":"gpt-4"
@@ -174,8 +175,12 @@ class airInterpreter:
             ("twit", 0):(self._twit, None),
             ("tweetstorm", 0):(self._tweetstorm, None),
             ("poem", 0):(self._poem, None),
+            ("ric", 0):(self._ric, None),
+            ("pric", 0):(self._pric, None),
             ("quiz", 0):(self._quiz, None),
             ("tutor", 0):(self._tutor, None),
+            ("bullets", 0):(self._bullets, None),
+            ("ref", 0):(self._ref, None),
             ("help", 0):(self._help, None)
         }
 
@@ -195,10 +200,15 @@ class airInterpreter:
         print("Type 'twit' to get a twitter hot take version of the material you're on")
         print("Type 'tweetstorm' to get a whole twitter tweetstorm about it - highly recommended!")
         print("Type 'poem' to rewrite the text in the form of a poem")
+        print("Type 'ric' to remove inline citations")
+        print("Type 'bullets' to display in nested bullet point list format")
         print("Type 'help' to display this again. Enjoy!")
 
     def _display(self, i):
         self.controller.display()
+
+    def _ref(self, i):
+        pass
 
     def _poem(self, i):
         choice = random.choice(["limerick", "ballad", "folk song", "rap battle", "haiku", "free verse", "religious verse"])
@@ -208,6 +218,16 @@ class airInterpreter:
         content = add_prompt + self.controller.currentDisplay()
         response = self._getChatbotResponse(content, self.controller.set["cheap_model"])
         self.controller.display(response)
+
+    def _ric(self, i):
+        ac._typewriter("Removing inline citations...\n")
+        add_prompt = "Remove inline citations from the following:\n\n"""
+        content = add_prompt + self.controller.currentDisplay()
+        response = self._getChatbotResponse(content, self.controller.set["cheap_model"])
+        self.controller.display(response)
+
+    def _pric(self, i):
+        self.controller.set["pric"] = not self.controller.set["pric"]
 
     def _tutor(self, i):
         add_prompt = ["""I want to learn about """, """. In a moment, I'm going to ask you a series of questions about it. But before we get into it, I'd appreciate it if you answered as though you were a no nonsense teacher with an ambitious, self-directed student. That is:
@@ -255,6 +275,30 @@ class airInterpreter:
             print()
 
             content = self._getChatbotResponse("Summarize the following conversation: " + content, self.controller.set["cheap_model"])
+
+    def _bullets(self, i):
+        add_prompt = """
+            Rewrite in compressed, simplified/shorthand English in a nested/multilayered bullet point list.\n\n
+
+            Use a format as follows:
+            * Main point 1
+                * Subpoint 1
+                    * Sub-subpoint1
+                * Subpoint 2
+            * Main point 2
+                * Subpoint 1
+                * Subpoint 2
+                * Subpoint 3
+
+            What follows is the text to put in this format:"""
+        content = add_prompt + self.controller.currentDisplay()
+        response = self._getChatbotResponse(content, self.controller.set["cheap_model"])
+        
+
+        content = "Rewrite the following in simplified English, but keep it in the same nested bullet-point list format:\n\n" + response
+        response = self._getChatbotResponse(content, self.controller.set["cheap_model"])
+
+        print(response)
 
     def _cls(self, i):
         os.system("cls")
@@ -333,11 +377,11 @@ class airInterpreter:
                 input()
                 continue
             if user_reply == 'answer':
-            	content = "Extract the answer for the question '" + response + "' from the test bank:\n" + qa
-            	response = self._getChatbotResponse(content, mod)
-            	self.controller.display(response)
-            	input()
-            	continue
+                content = "Extract the answer for the question '" + response + "' from the test bank:\n" + qa
+                response = self._getChatbotResponse(content, mod)
+                self.controller.display(response)
+                input()
+                continue
             content =   "SOURCE MATERIAL: \n" \
                         + self.controller.currentDisplay() \
                         + "QUIZ QUESTION: \n" \
